@@ -2,10 +2,10 @@ version: '3.9'
 
 services:
   poglin-bot-go:
-    image: pogbot:ubuntu
+    image: pogbot:alpine
     build:
       context: .
-      dockerfile: Dockerfile.ubuntu
+      dockerfile: Dockerfile.alpine
     container_name: poglin-bot-go
     environment:
       - DISCORD_API=$DISCORD_API
