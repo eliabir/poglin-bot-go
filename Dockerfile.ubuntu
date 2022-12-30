@@ -1,0 +1,19 @@
+FROM golang:1.19.4 AS build
+WORKDIR /app
+COPY . .
+RUN apt update -y && \
+    apt install -y git && \
+    git clone -b 2022.10.21 --single-branch https://github.com/philiptn/bash-toolbox.git && \
+    go get ./internal && \
+    go build -o /bin/pogbot internal/main.go
+
+FROM ubuntu:22.04 
+WORKDIR /usr/src/bot
+COPY --from=build /app/bin/pogbot /app/bash-toolbox/yt-dlp_discord ./
+RUN mkdir -p /usr/src/bot/videos && \
+    apt update -y && \
+    apt install -y \
+        python3-pip &&\
+    pip3 install yt-dlp
+
+CMD [ "/usr/src/bot/pogbot" ]

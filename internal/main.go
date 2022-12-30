@@ -12,7 +12,6 @@ import (
 	"syscall"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/joho/godotenv"
 )
 
 const ytdlp = "/usr/src/bot/bash-toolbox/yt-dlp_discord"
@@ -21,10 +20,10 @@ const videosDir = "/usr/src/bot/videos"
 func main() {
 
 	// Load environment variables from .env file
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Could not load .env file: ", err)
-	}
+	// err := godotenv.Load()
+	// if err != nil {
+	// 	log.Fatal("Could not load .env file: ", err)
+	// }
 
 	// Store DISCORD_API environment variable
 	apiKey := os.Getenv("DISCORD_API")
@@ -79,6 +78,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	// Message content
 	content := m.Content
 
+	// Check if the message has an instagram og tiktok URL
 	if !strings.Contains(content, "instagram.com/reel") && !strings.Contains(content, "tiktok.com/") {
 		return
 	}
