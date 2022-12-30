@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"os/signal"
 	"regexp"
 	"strings"
@@ -137,7 +138,7 @@ func downloadVideo(urls []string) []string {
 		}
 
 		// Download video from URL
-
+		exec.Command("/bin/sh", ytdlp)
 	}
 
 	// Change back to the original working directory
