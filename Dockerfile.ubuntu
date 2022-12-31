@@ -8,6 +8,8 @@ RUN apt update -y && \
     go build -o /bin/pogbot internal/main.go
 
 FROM ubuntu:22.04 
+LABEL maintainer="eliabir"
+LABEL org.opencontainers.image.source https://github.com/eliabir/poglin-bot-go
 WORKDIR /usr/src/bot
 COPY --from=build /app/bin/pogbot /app/bash-toolbox/yt-dlp_discord ./
 RUN mkdir -p /usr/src/bot/videos && \
