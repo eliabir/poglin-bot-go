@@ -1,0 +1,12 @@
+version: '3.9'
+
+services:
+  poglin-bot-go:
+    image: pogbot:alpine
+    build:
+      context: .
+      dockerfile: Dockerfile.alpine
+    container_name: poglin-bot-go
+    environment:
+      - DISCORD_API=$DISCORD_API
+    restart: unless-stopped
