@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -128,6 +127,12 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			log.Printf("Could not close %s: %s", video, err)
 		}
 
+		// Deleting video
+		log.Printf("Deleting %s", video)
+		err = os.Remove(videosDir + "/" + video)
+		if err != nil {
+			log.Printf("Failed to remove %s", err)
+		}
 	}
 }
 
@@ -178,21 +183,11 @@ func downloadVideo(origUrl string) (string, error) {
 	cmd := exec.Command("/bin/bash", ytdlp, "-v", "-c", url)
 
 	// Stream output from cmd
-	stdout, _ := cmd.StdoutPipe()
-	cmd.Start()
-	scanner := bufio.NewScanner(stdout)
-	scanner.Split(bufio.ScanWords)
-	for scanner.Scan() {
-		m := scanner.Text()
-		log.Println(m)
-	}
-	cmd.Wait()
-
-	//log.Printf("yt-dlp output: %v", out)
-	//err = cmd.Run()
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err = cmd.Run()
 	if err != nil {
-		log.Printf("Failed downloading video with error: %s", err)
-		return "", errors.New("failed downloading video")
+		log.Printf("Could not execute ytdlp: %s", err)
 	}
 
 	video, err := findRecentFile(videosDir)
