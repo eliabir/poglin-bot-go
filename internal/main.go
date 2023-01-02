@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
 	"os/exec"
@@ -83,7 +84,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
-	log.Printf("Video URL detected in '%s'", m.Content)
+	log.Printf("Video URL detected in '%s'", content)
 
 	// Extracting URLs from message
 	urls := urlExtract(content)
@@ -92,10 +93,106 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
+	// Download and send video running as goroutine
+	log.Printf("Download and send videos running as goroutine")
+	go sendVideo(urls, s, m)
+}
+
+// Function for extracting URL from messages
+func urlExtract(msg string) []string {
+	// Regex for finding URL substrings in string
+	//re := regexp.MustCompile("(?i)\b((?:https?://|www\\d{0,3}[.]|[a-z0-9.\\-]+[.][a-z]{2,4}/)(?:[^\\s()<>]+|\\(([^\\s()<>]+|(\\([^\\s()<>]+\\)))*\\))+(?:\\(([^\\s()<>]+|(\\([^\\s()<>]+\\)))*\\)|[^\\s`!()\\[\\]{};:'\\\".,<>?«»“”‘’]))")
+	re := regexp.MustCompile(`((([A-Za-z]{3,9}:(?:\/\/)?)(?:[-;:&=\+\$,\w]+@)?[A-Za-z0-9.-]+|(?:www.|[-;:&=\+\$,\w]+@)[A-Za-z0-9.-]+)((?:\/[\+~%\/.\w-_]*)?\??(?:[-\+=&;%@.\w_]*)#?(?:[.\!\/\\w]*))?)`)
+
+	// Checking the msg string for URLs using the re regex
+	urls := re.FindAllString(msg, -1)
+
+	log.Printf("Checked message for URLs")
+
+	return urls
+}
+
+func downloadVideo(origUrl string) (string, string, error) {
+	// // Store current working directory
+	// cwd, err := os.Getwd()
+	// if err != nil {
+	// 	log.Printf("Could not get current working directory: %s", err)
+	// 	return "", "", errors.New("could not get current working directory")
+	// }
+
+	cwd := "/app"
+
+	// Create new directory for video
+	dirName, _ := genRandomStr(10)
+	vidPath := videosDir + "/" + dirName
+	log.Printf("Creating directory %s", vidPath)
+	err := os.Mkdir(vidPath, 700)
+	if err != nil {
+		log.Printf("Could not create directory %s: %s", vidPath, err)
+		return "", "", errors.New("could not create directory")
+	}
+
+	// Change to videos/ directory to store videos
+	err = os.Chdir(vidPath)
+	if err != nil {
+		log.Printf("Could not change directory to %s: %s", vidPath, err)
+		return "", "", errors.New("failed changing directory")
+	}
+
+	// Get the final URL after redirects
+	url, err := followRedir(origUrl)
+	if err != nil {
+		return "", "", errors.New("following redirect failed")
+	}
+
+	// Check if TikTok URL is for a video
+	if strings.Contains(url, "tiktok") {
+		if !strings.Contains(url, "vm.tiktok") && !strings.Contains(url, "/@") {
+			return "", "", errors.New("not URL for a TikTok video")
+		}
+	}
+
+	// Create command to download video using yt-dlp
+	log.Printf("Downloading: %s", url)
+	cmd := exec.Command("/bin/bash", ytdlp, "-c", url)
+
+	// Stream output from cmd
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err = cmd.Run()
+	if err != nil {
+		log.Printf("Could not execute ytdlp: %s", err)
+	}
+
+	// Get name of downloaded video
+	videos, err := ioutil.ReadDir(vidPath)
+	if err != nil {
+		log.Printf("Could not list files in %s: %s", vidPath, err)
+		return "", "", errors.New("could not list files in directory")
+	}
+	video := videos[0].Name()
+
+	// video, err := findRecentFile(videosDir)
+	// if err != nil {
+	// 	log.Printf("Finding most recent file failed: %s", err)
+	// 	return "", errors.New("finding most recent file failed")
+	// }
+
+	// Change back to the original working directory
+	err = os.Chdir(cwd)
+	if err != nil {
+		log.Printf("Could not change directory to %s: %s", cwd, err)
+		return "", "", errors.New("failed changing directory")
+	}
+
+	return video, vidPath, nil
+}
+
+func sendVideo(urls []string, s *discordgo.Session, m *discordgo.MessageCreate) {
 	log.Print("Downloading and sending videos.")
 	for _, url := range urls {
 		log.Printf("Downloading: %s", url)
-		video, err := downloadVideo(url)
+		video, vidPath, err := downloadVideo(url)
 		if err != nil {
 			log.Printf("Could not download %s: %s", video, err)
 			continue
@@ -103,7 +200,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 		// Opening video file for reading
 		log.Printf("Opening %s", video)
-		vidReader, err := os.Open(videosDir + "/" + video)
+		vidReader, err := os.Open(vidPath + "/" + video)
 		if err != nil {
 			log.Printf("Failed to open %s: %s", video, err)
 			continue
@@ -128,83 +225,13 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			log.Printf("Could not close %s: %s", video, err)
 		}
 
-		// Deleting video
-		log.Printf("Deleting %s", video)
-		err = os.Remove(videosDir + "/" + video)
+		// Delete video and its directory
+		log.Printf("Deleting %s/%s", vidPath, video)
+		err = os.RemoveAll(vidPath + "/")
 		if err != nil {
-			log.Printf("Failed to remove %s", err)
+			log.Printf("Failed to remove %s: %s", vidPath, err)
 		}
 	}
-}
-
-// Function for extracting URL from messages
-func urlExtract(msg string) []string {
-	// Regex for finding URL substrings in string
-	//re := regexp.MustCompile("(?i)\b((?:https?://|www\\d{0,3}[.]|[a-z0-9.\\-]+[.][a-z]{2,4}/)(?:[^\\s()<>]+|\\(([^\\s()<>]+|(\\([^\\s()<>]+\\)))*\\))+(?:\\(([^\\s()<>]+|(\\([^\\s()<>]+\\)))*\\)|[^\\s`!()\\[\\]{};:'\\\".,<>?«»“”‘’]))")
-	re := regexp.MustCompile(`((([A-Za-z]{3,9}:(?:\/\/)?)(?:[-;:&=\+\$,\w]+@)?[A-Za-z0-9.-]+|(?:www.|[-;:&=\+\$,\w]+@)[A-Za-z0-9.-]+)((?:\/[\+~%\/.\w-_]*)?\??(?:[-\+=&;%@.\w_]*)#?(?:[.\!\/\\w]*))?)`)
-
-	// Checking the msg string for URLs using the re regex
-	urls := re.FindAllString(msg, -1)
-
-	log.Printf("Checked message for URLs")
-
-	return urls
-}
-
-func downloadVideo(origUrl string) (string, error) {
-	// Store current working directory
-	cwd, err := os.Getwd()
-	if err != nil {
-		log.Printf("Could not get current working directory")
-		return "", errors.New("could not get current working directory")
-	}
-
-	// Change to videos/ directory to store videos
-	err = os.Chdir(videosDir)
-	if err != nil {
-		log.Printf("Could not change directory to %s: %s", videosDir, err)
-		return "", errors.New("failed changing directory")
-	}
-
-	// Get the final URL after redirects
-	url, err := followRedir(origUrl)
-	if err != nil {
-		return "", errors.New("following redirect failed")
-	}
-
-	// Check if TikTok URL is for a video
-	if strings.Contains(url, "tiktok") {
-		if !strings.Contains(url, "vm.tiktok") && !strings.Contains(url, "/@") {
-			return "", errors.New("not URL for a TikTok video")
-		}
-	}
-
-	// Create command to download video using yt-dlp
-	log.Printf("Downloading: %s", url)
-	cmd := exec.Command("/bin/bash", ytdlp, "-v", "-c", url)
-
-	// Stream output from cmd
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	err = cmd.Run()
-	if err != nil {
-		log.Printf("Could not execute ytdlp: %s", err)
-	}
-
-	video, err := findRecentFile(videosDir)
-	if err != nil {
-		log.Printf("Finding most recent file failed: %s", err)
-		return "", errors.New("finding most recent file failed")
-	}
-
-	// Change back to the original working directory
-	err = os.Chdir(cwd)
-	if err != nil {
-		log.Printf("Could not change directory to %s: %s", cwd, err)
-		return "", errors.New("failed changing directory")
-	}
-
-	return video, nil
 }
 
 // Function for following URL redirects and find final URL
@@ -220,6 +247,16 @@ func followRedir(url string) (string, error) {
 	url = resp.Request.URL.String()
 
 	return url, nil
+}
+
+// Generate random string
+// Used for unique directory names for videos
+// SRC: https://stackoverflow.com/a/22892986/11234304
+func genRandomStr(strLen int) (string, error) {
+	rand.Seed(time.Now().UnixNano())
+	b := make([]byte, strLen)
+	rand.Read(b)
+	return fmt.Sprintf("%x", b)[:strLen], nil
 }
 
 // Function for finding most recently created file in directory
