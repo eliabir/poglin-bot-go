@@ -24,11 +24,14 @@ func main() {
 
 	// Store DISCORD_API environment variable
 	apiKey := os.Getenv("DISCORD_API")
+	if apiKey == "" {
+		log.Fatalln("Could not retrieve API token from environment variable")
+	}
 
 	// Create Discord bot session
 	dg, err := discordgo.New("Bot " + apiKey)
 	if err != nil {
-		log.Fatal("Could not create Discord session: ", err)
+		log.Fatalln("Could not create Discord session: ", err)
 	}
 
 	// Add ready() function as callback for ready events
@@ -43,7 +46,7 @@ func main() {
 	// Open websocket and wait for termination signal
 	err = dg.Open()
 	if err != nil {
-		log.Fatal("Error opening Discord websocket: ", err)
+		log.Fatalln("Error opening Discord websocket: ", err)
 	}
 
 	log.Printf("Poglin-bot is now running. Press CTRL-C to exit.")
