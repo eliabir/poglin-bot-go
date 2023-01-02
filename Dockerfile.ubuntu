@@ -1,20 +1,21 @@
 FROM golang:1.19.4 AS build
 WORKDIR /app
 COPY . .
-RUN apt update -y && \
-    apt install -y git && \
+RUN apt-get update -y && \
+    apt-get install -y git && \
     git clone -b 2022.10.21 --single-branch https://github.com/philiptn/bash-toolbox.git && \
     go get ./internal && \
-    go build -o /bin/pogbot internal/main.go
+    go build -o /pogbot internal/main.go
 
 FROM ubuntu:22.04 
 LABEL maintainer="eliabir"
 LABEL org.opencontainers.image.source https://github.com/eliabir/poglin-bot-go
 WORKDIR /usr/src/bot
-COPY --from=build /app/bin/pogbot /app/bash-toolbox/yt-dlp_discord ./
+COPY --from=build /pogbot /app/bash-toolbox/yt-dlp_discord ./
 RUN mkdir -p /usr/src/bot/videos && \
-    apt update -y && \
-    apt install -y \
+    apt-get update -y && \
+    apt-get install -y \
+        ffmpeg \
         python3-pip &&\
     pip3 install yt-dlp
 
