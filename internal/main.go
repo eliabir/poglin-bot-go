@@ -19,6 +19,7 @@ import (
 )
 
 const ytdlp = "/app/yt-dlp_discord"
+const mainDir = "/app"
 const videosDir = "/app/videos"
 
 func main() {
@@ -113,15 +114,6 @@ func urlExtract(msg string) []string {
 }
 
 func downloadVideo(origUrl string) (string, string, error) {
-	// // Store current working directory
-	// cwd, err := os.Getwd()
-	// if err != nil {
-	// 	log.Printf("Could not get current working directory: %s", err)
-	// 	return "", "", errors.New("could not get current working directory")
-	// }
-
-	cwd := "/app"
-
 	// Create new directory for video
 	dirName, _ := genRandomStr(10)
 	vidPath := videosDir + "/" + dirName
@@ -172,16 +164,10 @@ func downloadVideo(origUrl string) (string, string, error) {
 	}
 	video := videos[0].Name()
 
-	// video, err := findRecentFile(videosDir)
-	// if err != nil {
-	// 	log.Printf("Finding most recent file failed: %s", err)
-	// 	return "", errors.New("finding most recent file failed")
-	// }
-
-	// Change back to the original working directory
-	err = os.Chdir(cwd)
+	// Change back to the main working directory
+	err = os.Chdir(mainDir)
 	if err != nil {
-		log.Printf("Could not change directory to %s: %s", cwd, err)
+		log.Printf("Could not change directory to %s: %s", mainDir, err)
 		return "", "", errors.New("failed changing directory")
 	}
 
