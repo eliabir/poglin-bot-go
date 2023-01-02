@@ -108,17 +108,15 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 		// Constructing discordgo.File object of the downloaded videofile
 		log.Printf("Constructing discordgo.File object and pointer")
-		vidFile := &discordgo.File{Name: video, ContentType: "video/mp4", Reader: vidReader}
-		vidFilePtrSlice := []*discordgo.File{vidFile}
+		vidFile := []*discordgo.File{{Name: video, ContentType: "video/mp4", Reader: vidReader}}
 
 		// Constructing discordgo.MessageSend object to send video
 		log.Printf("Constructing discordgo.MessageSend object")
-		msgSend := discordgo.MessageSend{Files: vidFilePtrSlice, Reference: m.MessageReference}
-		msgSendPtr := &msgSend
+		msgSend := &discordgo.MessageSend{Files: vidFile, Reference: m.MessageReference}
 
 		// Sending video
 		log.Printf("Sending video: %s", video)
-		_, err = s.ChannelMessageSendComplex(m.ChannelID, msgSendPtr)
+		_, err = s.ChannelMessageSendComplex(m.ChannelID, msgSend)
 
 		// Closing video file
 		log.Printf("Closing %s", video)
