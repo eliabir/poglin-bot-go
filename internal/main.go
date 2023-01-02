@@ -1,7 +1,10 @@
 package main
 
 import (
+	"bufio"
+	"errors"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -10,20 +13,15 @@ import (
 	"regexp"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 )
 
-const ytdlp = "/usr/src/bot/bash-toolbox/yt-dlp_discord"
-const videosDir = "/usr/src/bot/videos"
+const ytdlp = "/app/yt-dlp_discord"
+const videosDir = "/app/videos"
 
 func main() {
-
-	// Load environment variables from .env file
-	// err := godotenv.Load()
-	// if err != nil {
-	// 	log.Fatal("Could not load .env file: ", err)
-	// }
 
 	// Store DISCORD_API environment variable
 	apiKey := os.Getenv("DISCORD_API")
@@ -92,11 +90,26 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
-	log.Print("Extracted URLs: ")
-	for i := 0; i < len(urls); i++ {
-		log.Printf("%s ", urls[i])
+	log.Print("Downloading and sending videos.")
+	for _, url := range urls {
+		log.Printf("Downloading: %s", url)
+		video, err := downloadVideo(url)
+		if err != nil {
+			log.Printf("Could not download %s: %s", video, err)
+			continue
+		}
+
+		// msg := discordgo.MessageSend(
+		// 	Files:
+		// 	Reference:
+		// )
+
+		// s.ChannelMessageSendComplex()
+
 	}
 
+	video, _ := ioutil.ReadDir(videosDir)
+	log.Printf("Downloaded video: %s", video[0].Name())
 }
 
 // Function for extracting URL from messages
@@ -113,50 +126,113 @@ func urlExtract(msg string) []string {
 	return urls
 }
 
-func downloadVideo(urls []string) []string {
+func downloadVideo(origUrl string) (string, error) {
 	// Store current working directory
 	cwd, err := os.Getwd()
 	if err != nil {
-		log.Fatal("Could not get current working directory")
+		log.Printf("Could not get current working directory")
+		return "", errors.New("could not get current working directory")
 	}
 
 	// Change to videos/ directory to store videos
-	os.Chdir(videosDir)
+	err = os.Chdir(videosDir)
+	if err != nil {
+		log.Printf("Could not change directory to %s: %s", videosDir, err)
+		return "", errors.New("failed changing directory")
+	}
 
-	for i := 0; i < len(urls); i++ {
-		// Get the final URL after redirects
-		url := followRedir(urls[i])
-		if url == "" {
-			continue
+	// Get the final URL after redirects
+	url, err := followRedir(origUrl)
+	if err != nil {
+		return "", errors.New("following redirect failed")
+	}
+
+	// Check if TikTok URL is for a video
+	if strings.Contains(url, "tiktok") {
+		if !strings.Contains(url, "vm.tiktok") && !strings.Contains(url, "/@") {
+			return "", errors.New("not URL for a TikTok video")
 		}
+	}
 
-		// Check if TikTok URL is for a video
-		if strings.Contains(url, "tiktok") {
-			if !strings.Contains(url, "vm.tiktok") && !strings.Contains(url, "/@") {
-				continue
-			}
-		}
+	// Create command to download video using yt-dlp
+	log.Printf("Downloading: %s", url)
+	cmd := exec.Command("/bin/bash", ytdlp, "-v", "-c", url)
 
-		// Download video from URL
-		exec.Command("/bin/sh", ytdlp)
+	stdout, _ := cmd.StdoutPipe()
+	cmd.Start()
+
+	scanner := bufio.NewScanner(stdout)
+	scanner.Split(bufio.ScanWords)
+	for scanner.Scan() {
+		m := scanner.Text()
+		log.Println(m)
+	}
+	cmd.Wait()
+
+	//log.Printf("yt-dlp output: %v", out)
+	//err = cmd.Run()
+	if err != nil {
+		log.Printf("Failed downloading video with error: %s", err)
+		return "", errors.New("failed downloading video")
+	}
+
+	video, err := findRecentFile(videosDir)
+	if err != nil {
+		log.Printf("Finding most recent file failed: %s", err)
+		return "", errors.New("finding most recent file failed")
 	}
 
 	// Change back to the original working directory
-	os.Chdir(cwd)
+	err = os.Chdir(cwd)
+	if err != nil {
+		log.Printf("Could not change directory to %s: %s", cwd, err)
+		return "", errors.New("failed changing directory")
+	}
 
-	return []string{""}
+	return video, nil
 }
 
-func followRedir(url string) string {
+// Function for following URL redirects and find final URL
+func followRedir(url string) (string, error) {
 	// Request URL to follow redirects and find final URL
 	resp, err := http.Get(url)
 	if err != nil {
 		log.Printf("Request to %s failed with error: %s", url, err)
-		return ""
+		return "", errors.New("could not reach URL")
 	}
 
 	// Store the final URL
 	url = resp.Request.URL.String()
 
-	return url
+	return url, nil
+}
+
+// Function for finding most recently created file in directory
+// SRC: https://stackoverflow.com/a/45579190
+func findRecentFile(dir string) (string, error) {
+	files, err := ioutil.ReadDir(dir)
+	if err != nil {
+		log.Printf("Could not list files in %s: %s", dir, err)
+		return "", errors.New("could not list files")
+	}
+
+	var modTime time.Time
+	var names []string
+
+	for _, fi := range files {
+		if fi.Mode().IsRegular() {
+			if !fi.ModTime().Before(modTime) {
+				if fi.ModTime().After(modTime) {
+					modTime = fi.ModTime()
+					names = names[:0]
+				}
+				names = append(names, fi.Name())
+			}
+		}
+	}
+	if len(names) > 0 {
+		fmt.Println(modTime, names)
+	}
+
+	return names[len(names)-1], nil
 }
