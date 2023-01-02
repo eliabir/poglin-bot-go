@@ -24,7 +24,7 @@ const videosDir = "/app/videos"
 
 func main() {
 
-	// Store DISCORD_API environment variable
+	// Get DISCORD_API environment variable
 	apiKey := os.Getenv("DISCORD_API")
 	if apiKey == "" {
 		log.Fatalln("Could not retrieve API token from environment variable")
@@ -69,7 +69,7 @@ func ready(s *discordgo.Session, event *discordgo.Ready) {
 	s.UpdateGameStatus(0, "Waiting for videos")
 }
 
-// Function called when messages are created
+// Function called when messages new messages are detected
 func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 	// Ignore messages created by the bot
@@ -80,7 +80,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	// Message content
 	content := m.Content
 
-	// Check if the message has an instagram og tiktok URL
+	// Check if the message has an Instagram or tiktok URL
 	if !strings.Contains(content, "instagram.com/reel") && !strings.Contains(content, "tiktok.com/") {
 		return
 	}
