@@ -99,17 +99,36 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			continue
 		}
 
-		// msg := discordgo.MessageSend(
-		// 	Files:
-		// 	Reference:
-		// )
+		// Opening video file for reading
+		log.Printf("Opening %s", video)
+		vidReader, err := os.Open(videosDir + "/" + video)
+		if err != nil {
+			log.Printf("Failed to open %s: %s", video, err)
+			continue
+		}
 
-		// s.ChannelMessageSendComplex()
+		// Constructing discordgo.File object of the downloaded videofile
+		log.Printf("Constructing discordgo.File object and pointer")
+		vidFile := &discordgo.File{Name: video, ContentType: "video/mp4", Reader: vidReader}
+		vidFilePtrSlice := []*discordgo.File{vidFile}
+
+		// Constructing discordgo.MessageSend object to send video
+		log.Printf("Constructing discordgo.MessageSend object")
+		msgSend := discordgo.MessageSend{Files: vidFilePtrSlice, Reference: m.MessageReference}
+		msgSendPtr := &msgSend
+
+		// Sending video
+		log.Printf("Sending video: %s", video)
+		_, err = s.ChannelMessageSendComplex(m.ChannelID, msgSendPtr)
+
+		// Closing video file
+		log.Printf("Closing %s", video)
+		err = vidReader.Close()
+		if err != nil {
+			log.Printf("Could not close %s: %s", video, err)
+		}
 
 	}
-
-	video, _ := ioutil.ReadDir(videosDir)
-	log.Printf("Downloaded video: %s", video[0].Name())
 }
 
 // Function for extracting URL from messages
@@ -158,9 +177,9 @@ func downloadVideo(origUrl string) (string, error) {
 	log.Printf("Downloading: %s", url)
 	cmd := exec.Command("/bin/bash", ytdlp, "-v", "-c", url)
 
+	// Stream output from cmd
 	stdout, _ := cmd.StdoutPipe()
 	cmd.Start()
-
 	scanner := bufio.NewScanner(stdout)
 	scanner.Split(bufio.ScanWords)
 	for scanner.Scan() {
