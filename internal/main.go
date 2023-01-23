@@ -80,6 +80,9 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	// Message content
 	content := m.Content
 
+	// Message reference
+	msgRef := m.Reference()
+
 	// Check if the message has an Instagram or tiktok URL
 	if !strings.Contains(content, "instagram.com/reel") && !strings.Contains(content, "tiktok.com/") {
 		return
@@ -96,7 +99,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 	// Download and send video running as goroutine
 	log.Printf("Download and send videos running as goroutine")
-	go sendVideo(urls, s, m)
+	go sendVideo(urls, s, m, msgRef)
 }
 
 // Function for extracting URL from messages
@@ -174,7 +177,7 @@ func downloadVideo(origUrl string) (string, string, error) {
 	return video, vidPath, nil
 }
 
-func sendVideo(urls []string, s *discordgo.Session, m *discordgo.MessageCreate) {
+func sendVideo(urls []string, s *discordgo.Session, m *discordgo.MessageCreate, msgRef *discordgo.MessageReference) {
 	log.Print("Downloading and sending videos.")
 	for _, url := range urls {
 		log.Printf("Downloading: %s", url)
@@ -198,7 +201,7 @@ func sendVideo(urls []string, s *discordgo.Session, m *discordgo.MessageCreate) 
 
 		// Constructing discordgo.MessageSend object to send video
 		log.Printf("Constructing discordgo.MessageSend object")
-		msgSend := &discordgo.MessageSend{Files: vidFile, Reference: m.MessageReference}
+		msgSend := &discordgo.MessageSend{Files: vidFile, Reference: msgRef}
 
 		// Sending video
 		log.Printf("Sending video: %s", video)
