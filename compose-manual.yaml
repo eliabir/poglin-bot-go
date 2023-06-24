@@ -8,5 +8,5 @@ services:
       dockerfile: Dockerfile.alpine
     container_name: poglin-bot-go
     environment:
-      - DISCORD_API=$DISCORD_API
+      - DISCORD_API=$DISCORD_DEV_API
     restart: unless-stopped
