@@ -84,7 +84,8 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	msgRef := m.Reference()
 
 	// Check if the message has an Instagram or tiktok URL
-	if !strings.Contains(content, "instagram.com/reel") && !strings.Contains(content, "tiktok.com/") {
+	if !urlCheck(content) {
+		log.Println("URL not in correct domain")
 		return
 	}
 
@@ -100,6 +101,18 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	// Download and send video running as goroutine
 	log.Printf("Download and send videos running as goroutine")
 	go sendVideo(urls, s, m, msgRef)
+}
+
+// Function for checking if URL is from one of the supported sites
+func urlCheck(content string) bool {
+	domains := []string{"instagram.com/reel", "tiktok.com", "youtube.com/shorts"}
+	for _, domain := range domains {
+		if strings.Contains(content, domain) {
+			return true
+		}
+	}
+
+	return false
 }
 
 // Function for extracting URL from messages
@@ -181,11 +194,51 @@ func downloadVideo(origUrl string) (string, string, error) {
 func sendVideo(urls []string, s *discordgo.Session, m *discordgo.MessageCreate, msgRef *discordgo.MessageReference) {
 	log.Print("Downloading and sending videos.")
 	for _, url := range urls {
-		log.Printf("Downloading: %s", url)
-		video, vidPath, err := downloadVideo(url)
-		if err != nil {
-			log.Printf("Could not download %s: %s", video, err)
-			continue
+
+		var vidPath string // Variable for storing path of downloaded video
+		var video string   // Variable for storing name of downloaded video
+		var err error      // Variable for storing error code
+
+		maxAttempts := 3 // Maximum amount of allowed attempts
+		attempt := 0     // Variable for current attempt number
+
+		for {
+			log.Printf("Downloading: %s", url)
+			video, vidPath, err = downloadVideo(url)
+			if err != nil {
+				log.Printf("Could not download %s: %s", video, err)
+				attempt += 1
+
+				if attempt >= maxAttempts {
+					break
+				} else {
+					continue
+				}
+			}
+
+			// If the downloaded file is called .tmp the download has failed. Retry
+			if video == ".tmp" {
+				attempt += 1
+				log.Printf("Failed to download video. Retries left: %d", maxAttempts-attempt)
+
+				// Delete failed downloaded video and its directory
+				log.Printf("Deleting %s/%s", vidPath, video)
+				err = os.RemoveAll(vidPath + "/")
+				if err != nil {
+					log.Printf("Failed to remove %s: %s", vidPath, err)
+				}
+
+				// Exit if max amount of attempts is reached
+				if attempt >= maxAttempts {
+					log.Printf("Could not download video after %d attempts. Exiting...", attempt)
+					return
+				} else {
+					continue
+				}
+
+			} else {
+				break
+			}
 		}
 
 		// Opening video file for reading
