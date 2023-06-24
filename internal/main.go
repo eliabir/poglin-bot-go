@@ -84,7 +84,8 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	msgRef := m.Reference()
 
 	// Check if the message has an Instagram or tiktok URL
-	if !strings.Contains(content, "instagram.com/reel") && !strings.Contains(content, "tiktok.com/") {
+	if !urlCheck(content) {
+		log.Println("URL not in correct domain")
 		return
 	}
 
@@ -100,6 +101,18 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	// Download and send video running as goroutine
 	log.Printf("Download and send videos running as goroutine")
 	go sendVideo(urls, s, m, msgRef)
+}
+
+// Function for checking if URL is from one of the supported sites
+func urlCheck(content string) bool {
+	domains := []string{"instagram.com/reel", "tiktok.com", "youtube.com/shorts"}
+	for _, domain := range domains {
+		if strings.Contains(content, domain) {
+			return true
+		}
+	}
+
+	return false
 }
 
 // Function for extracting URL from messages
