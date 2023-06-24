@@ -85,7 +85,6 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 	// Check if the message has an Instagram or tiktok URL
 	if !urlCheck(content) {
-		log.Println("URL not in correct domain")
 		return
 	}
 
