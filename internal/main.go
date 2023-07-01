@@ -129,7 +129,7 @@ func urlExtract(msg string) []string {
 	return urls
 }
 
-func downloadVideo(origUrl string) (string, string, error) {
+func downloadVideo(url string) (string, string, error) {
 	// Create new directory for video
 	dirName, _ := genRandomStr(10)
 	vidPath := videosDir + "/" + dirName
@@ -147,16 +147,19 @@ func downloadVideo(origUrl string) (string, string, error) {
 		return "", "", errors.New("failed changing directory")
 	}
 
-	// Get the final URL after redirects
-	url, err := followRedir(origUrl)
-	if err != nil {
-		return "", "", errors.New("following redirect failed")
-	}
-
 	// Check if TikTok URL is for a video
 	if strings.Contains(url, "tiktok") {
 		if !strings.Contains(url, "vm.tiktok") && !strings.Contains(url, "/@") {
 			return "", "", errors.New("not URL for a TikTok video")
+		} else {
+			// Get the final URL after redirects
+			log.Printf("Following redirect from %s", url)
+			url, err = followRedir(url)
+			if err != nil {
+				log.Fatalf("Following redirect failed")
+				// return "", "", errors.New("following redirect failed")
+			}
+			log.Printf("Followed redirect until %s", url)
 		}
 	}
 
