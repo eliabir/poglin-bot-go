@@ -2,11 +2,11 @@ version: '3.9'
 
 services:
   poglin-bot-go:
-    image: pogbot:alpine
+    image: pogbot:alpine-testing
     build:
       context: .
       dockerfile: Dockerfile.alpine
-    container_name: poglin-bot-go
+    container_name: poglin-bot-go-testing
     volumes:
       - ./cookies.txt:/app/cookies.txt
     environment:
