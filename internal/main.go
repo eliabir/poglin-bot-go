@@ -314,35 +314,3 @@ func genRandomStr(strLen int) (string, error) {
 	rand.Read(b)
 	return fmt.Sprintf("%x", b)[:strLen], nil
 }
-
-//** DEPRECATED **//
-
-// Function for finding most recently created file in directory
-// SRC: https://stackoverflow.com/a/45579190
-// func findRecentFile(dir string) (string, error) {
-// 	files, err := os.ReadDir(dir)
-// 	if err != nil {
-// 		log.Printf("Could not list files in %s: %s", dir, err)
-// 		return "", errors.New("could not list files")
-// 	}
-
-// 	var modTime time.Time
-// 	var names []string
-
-// 	for _, fi := range files {
-// 		if fi.Mode().IsRegular() {
-// 			if !fi.ModTime().Before(modTime) {
-// 				if fi.ModTime().After(modTime) {
-// 					modTime = fi.ModTime()
-// 					names = names[:0]
-// 				}
-// 				names = append(names, fi.Name())
-// 			}
-// 		}
-// 	}
-// 	if len(names) > 0 {
-// 		fmt.Println(modTime, names)
-// 	}
-
-// 	return names[len(names)-1], nil
-// }
