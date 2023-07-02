@@ -2,8 +2,10 @@ version: '3.9'
 
 services:
   poglin-bot-go:
-    image: ghcr.io/eliabir/poglin-bot-go:v0.0.1-alpine
+    image: ghcr.io/eliabir/poglin-bot-go
     container_name: poglin-bot-go
+    volumes:
+      - ./cookies.txt:/app/cookies.txt
     environment:
       - DISCORD_API=$DISCORD_API
     restart: unless-stopped
