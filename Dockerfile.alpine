@@ -4,8 +4,7 @@ COPY . .
 RUN apk update && \
     apk add git \
             wget && \
-    #git clone -b 2023.01.17 --single-branch https://github.com/philiptn/bash-toolbox.git && \
-    git clone https://github.com/philiptn/bash-toolbox.git && \
+    git clone -b 2023.07.02 --single-branch https://github.com/philiptn/bash-toolbox.git && \
     wget https://github.com/yt-dlp/yt-dlp/releases/download/2023.06.22/yt-dlp -O /app/yt-dlp && \
     chmod +x /app/yt-dlp && \
     go get ./internal && \
