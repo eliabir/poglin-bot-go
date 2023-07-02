@@ -21,6 +21,7 @@ import (
 const ytdlp = "/app/yt-dlp_discord"
 const mainDir = "/app"
 const videosDir = "/app/videos"
+const cookiesFile = "/app/cookies.txt"
 
 func main() {
 
@@ -165,7 +166,14 @@ func downloadVideo(url string) (string, string, error) {
 
 	// Create command to download video using yt-dlp
 	log.Printf("Downloading: %s", url)
-	cmd := exec.Command("/bin/bash", ytdlp, "-c", url)
+
+	// Variable for the argument passing the cookies.txt file
+	// cookiesArg := fmt.Sprintf("'--cookies %s'", cookiesFile)
+	// ytdlpArgs := fmt.Sprintf("-c -p %s", url)
+	cmd := exec.Command(ytdlp, "-p", "'--cookies", "/app/cookies.txt'", "-c", url)
+	//cmd := exec.Command("/bin/bash", "-c" ytdlp, "-p", cookiesArg, "-c", url)
+
+	log.Printf("Command: %s", cmd.String())
 
 	// Stream output from cmd
 	cmd.Stdout = os.Stdout
