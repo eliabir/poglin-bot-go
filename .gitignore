@@ -21,7 +21,10 @@
 go.work
 
 # Ignore .env files
-
 *.env
 
+# Ignore changelog file
 CHANGELOG.md
+
+# Ignore cookie files
+*cookies*

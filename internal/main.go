@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"math/rand"
 	"net/http"
@@ -21,6 +20,7 @@ import (
 const ytdlp = "/app/yt-dlp_discord"
 const mainDir = "/app"
 const videosDir = "/app/videos"
+const cookiesFile = "/app/cookies.txt"
 
 func main() {
 
@@ -117,8 +117,6 @@ func urlCheck(content string) bool {
 // Function for extracting URL from messages
 func urlExtract(msg string) []string {
 	// Regex for finding URL substrings in string
-	//re := regexp.MustCompile("(?i)\b((?:https?://|www\\d{0,3}[.]|[a-z0-9.\\-]+[.][a-z]{2,4}/)(?:[^\\s()<>]+|\\(([^\\s()<>]+|(\\([^\\s()<>]+\\)))*\\))+(?:\\(([^\\s()<>]+|(\\([^\\s()<>]+\\)))*\\)|[^\\s`!()\\[\\]{};:'\\\".,<>?«»“”‘’]))")
-	//re := regexp.MustCompile(`((([A-Za-z]{3,9}:(?:\/\/)?)(?:[-;:&=\+\$,\w]+@)?[A-Za-z0-9.-]+|(?:www.|[-;:&=\+\$,\w]+@)[A-Za-z0-9.-]+)((?:\/[\+~%\/.\w-_]*)?\??(?:[-\+=&;%@.\w_]*)#?(?:[.\!\/\\w]*))?)`)
 	re := regexp.MustCompile(`((([A-Za-z]{3,9}:(?:\/\/)?)(?:[-;:&=\+\$,\w]+@)?[A-Za-z0-9.-]+|(?:www.|[-;:&=\+\$,\w]+@)[A-Za-z0-9.-]+)((?:\/[\+~%\/.\w\-_]*)?\??(?:[-\+=&;%@.\w_]*)#?(?:[.\!\/\\\w]*))?)`)
 
 	// Checking the msg string for URLs using the re regex
@@ -134,7 +132,7 @@ func downloadVideo(url string) (string, string, error) {
 	dirName, _ := genRandomStr(10)
 	vidPath := videosDir + "/" + dirName
 	log.Printf("Creating directory %s", vidPath)
-	err := os.Mkdir(vidPath, 700)
+	err := os.Mkdir(vidPath, 0700)
 	if err != nil {
 		log.Printf("Could not create directory %s: %s", vidPath, err)
 		return "", "", errors.New("could not create directory")
@@ -163,9 +161,15 @@ func downloadVideo(url string) (string, string, error) {
 		}
 	}
 
-	// Create command to download video using yt-dlp
+	// Variables for constructing command for downloading video
+	cookiesArg := fmt.Sprintf("\"--cookies %s\"", cookiesFile)         // Variable for the argument passing the cookies.txt file
+	ytdlpArgs := fmt.Sprintf("%s -c -p %s %s", ytdlp, cookiesArg, url) // Variable for storing the entire command for downloading video
+
+	// Execute command to download video using yt-dlp_discord
 	log.Printf("Downloading: %s", url)
-	cmd := exec.Command("/bin/bash", ytdlp, "-c", url)
+	cmd := exec.Command("/bin/bash", "-c", ytdlpArgs)
+
+	log.Printf("Command: %s", cmd.String())
 
 	// Stream output from cmd
 	cmd.Stdout = os.Stdout
@@ -176,7 +180,7 @@ func downloadVideo(url string) (string, string, error) {
 	}
 
 	// Get name of downloaded video
-	videos, err := ioutil.ReadDir(vidPath)
+	videos, err := os.ReadDir(vidPath)
 	if err != nil {
 		log.Printf("Could not list files in %s: %s", vidPath, err)
 		return "", "", errors.New("could not list files in directory")
@@ -262,6 +266,9 @@ func sendVideo(urls []string, s *discordgo.Session, m *discordgo.MessageCreate, 
 		// Sending video
 		log.Printf("Sending video: %s", video)
 		_, err = s.ChannelMessageSendComplex(m.ChannelID, msgSend)
+		if err != nil {
+			log.Panicf("Could not send video: %s", err)
+		}
 
 		// Closing video file
 		log.Printf("Closing %s", video)
@@ -302,34 +309,4 @@ func genRandomStr(strLen int) (string, error) {
 	b := make([]byte, strLen)
 	rand.Read(b)
 	return fmt.Sprintf("%x", b)[:strLen], nil
-}
-
-// Function for finding most recently created file in directory
-// SRC: https://stackoverflow.com/a/45579190
-func findRecentFile(dir string) (string, error) {
-	files, err := ioutil.ReadDir(dir)
-	if err != nil {
-		log.Printf("Could not list files in %s: %s", dir, err)
-		return "", errors.New("could not list files")
-	}
-
-	var modTime time.Time
-	var names []string
-
-	for _, fi := range files {
-		if fi.Mode().IsRegular() {
-			if !fi.ModTime().Before(modTime) {
-				if fi.ModTime().After(modTime) {
-					modTime = fi.ModTime()
-					names = names[:0]
-				}
-				names = append(names, fi.Name())
-			}
-		}
-	}
-	if len(names) > 0 {
-		fmt.Println(modTime, names)
-	}
-
-	return names[len(names)-1], nil
 }
