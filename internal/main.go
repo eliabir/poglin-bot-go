@@ -117,8 +117,6 @@ func urlCheck(content string) bool {
 // Function for extracting URL from messages
 func urlExtract(msg string) []string {
 	// Regex for finding URL substrings in string
-	//re := regexp.MustCompile("(?i)\b((?:https?://|www\\d{0,3}[.]|[a-z0-9.\\-]+[.][a-z]{2,4}/)(?:[^\\s()<>]+|\\(([^\\s()<>]+|(\\([^\\s()<>]+\\)))*\\))+(?:\\(([^\\s()<>]+|(\\([^\\s()<>]+\\)))*\\)|[^\\s`!()\\[\\]{};:'\\\".,<>?«»“”‘’]))")
-	//re := regexp.MustCompile(`((([A-Za-z]{3,9}:(?:\/\/)?)(?:[-;:&=\+\$,\w]+@)?[A-Za-z0-9.-]+|(?:www.|[-;:&=\+\$,\w]+@)[A-Za-z0-9.-]+)((?:\/[\+~%\/.\w-_]*)?\??(?:[-\+=&;%@.\w_]*)#?(?:[.\!\/\\w]*))?)`)
 	re := regexp.MustCompile(`((([A-Za-z]{3,9}:(?:\/\/)?)(?:[-;:&=\+\$,\w]+@)?[A-Za-z0-9.-]+|(?:www.|[-;:&=\+\$,\w]+@)[A-Za-z0-9.-]+)((?:\/[\+~%\/.\w\-_]*)?\??(?:[-\+=&;%@.\w_]*)#?(?:[.\!\/\\\w]*))?)`)
 
 	// Checking the msg string for URLs using the re regex
@@ -163,11 +161,9 @@ func downloadVideo(url string) (string, string, error) {
 		}
 	}
 
-	// Variable for the argument passing the cookies.txt file
-	cookiesArg := fmt.Sprintf("\"--cookies %s\"", cookiesFile)
-
-	// Variable for storing the entire command for downloading video
-	ytdlpArgs := fmt.Sprintf("%s -c -p %s %s", ytdlp, cookiesArg, url)
+	// Variables for constructing command for downloading video
+	cookiesArg := fmt.Sprintf("\"--cookies %s\"", cookiesFile)         // Variable for the argument passing the cookies.txt file
+	ytdlpArgs := fmt.Sprintf("%s -c -p %s %s", ytdlp, cookiesArg, url) // Variable for storing the entire command for downloading video
 
 	// Execute command to download video using yt-dlp_discord
 	log.Printf("Downloading: %s", url)
