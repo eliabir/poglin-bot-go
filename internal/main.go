@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"math/rand"
 	"net/http"
@@ -185,7 +184,7 @@ func downloadVideo(url string) (string, string, error) {
 	}
 
 	// Get name of downloaded video
-	videos, err := ioutil.ReadDir(vidPath)
+	videos, err := os.ReadDir(vidPath)
 	if err != nil {
 		log.Printf("Could not list files in %s: %s", vidPath, err)
 		return "", "", errors.New("could not list files in directory")
@@ -316,32 +315,34 @@ func genRandomStr(strLen int) (string, error) {
 	return fmt.Sprintf("%x", b)[:strLen], nil
 }
 
+//** DEPRECATED **//
+
 // Function for finding most recently created file in directory
 // SRC: https://stackoverflow.com/a/45579190
-func findRecentFile(dir string) (string, error) {
-	files, err := ioutil.ReadDir(dir)
-	if err != nil {
-		log.Printf("Could not list files in %s: %s", dir, err)
-		return "", errors.New("could not list files")
-	}
+// func findRecentFile(dir string) (string, error) {
+// 	files, err := os.ReadDir(dir)
+// 	if err != nil {
+// 		log.Printf("Could not list files in %s: %s", dir, err)
+// 		return "", errors.New("could not list files")
+// 	}
 
-	var modTime time.Time
-	var names []string
+// 	var modTime time.Time
+// 	var names []string
 
-	for _, fi := range files {
-		if fi.Mode().IsRegular() {
-			if !fi.ModTime().Before(modTime) {
-				if fi.ModTime().After(modTime) {
-					modTime = fi.ModTime()
-					names = names[:0]
-				}
-				names = append(names, fi.Name())
-			}
-		}
-	}
-	if len(names) > 0 {
-		fmt.Println(modTime, names)
-	}
+// 	for _, fi := range files {
+// 		if fi.Mode().IsRegular() {
+// 			if !fi.ModTime().Before(modTime) {
+// 				if fi.ModTime().After(modTime) {
+// 					modTime = fi.ModTime()
+// 					names = names[:0]
+// 				}
+// 				names = append(names, fi.Name())
+// 			}
+// 		}
+// 	}
+// 	if len(names) > 0 {
+// 		fmt.Println(modTime, names)
+// 	}
 
-	return names[len(names)-1], nil
-}
+// 	return names[len(names)-1], nil
+// }
