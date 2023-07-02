@@ -135,7 +135,7 @@ func downloadVideo(url string) (string, string, error) {
 	dirName, _ := genRandomStr(10)
 	vidPath := videosDir + "/" + dirName
 	log.Printf("Creating directory %s", vidPath)
-	err := os.Mkdir(vidPath, 700)
+	err := os.Mkdir(vidPath, 0700)
 	if err != nil {
 		log.Printf("Could not create directory %s: %s", vidPath, err)
 		return "", "", errors.New("could not create directory")
@@ -164,13 +164,14 @@ func downloadVideo(url string) (string, string, error) {
 		}
 	}
 
-	// Create command to download video using yt-dlp
-	log.Printf("Downloading: %s", url)
-
 	// Variable for the argument passing the cookies.txt file
 	cookiesArg := fmt.Sprintf("\"--cookies %s\"", cookiesFile)
+
+	// Variable for storing the entire command for downloading video
 	ytdlpArgs := fmt.Sprintf("%s -c -p %s %s", ytdlp, cookiesArg, url)
-	// cmd := exec.Command(ytdlp, "-c", "-p", cookiesArg, url)
+
+	// Execute command to download video using yt-dlp_discord
+	log.Printf("Downloading: %s", url)
 	cmd := exec.Command("/bin/bash", "-c", ytdlpArgs)
 
 	log.Printf("Command: %s", cmd.String())
@@ -270,6 +271,9 @@ func sendVideo(urls []string, s *discordgo.Session, m *discordgo.MessageCreate, 
 		// Sending video
 		log.Printf("Sending video: %s", video)
 		_, err = s.ChannelMessageSendComplex(m.ChannelID, msgSend)
+		if err != nil {
+			log.Panicf("Could not send video: %s", err)
+		}
 
 		// Closing video file
 		log.Printf("Closing %s", video)
