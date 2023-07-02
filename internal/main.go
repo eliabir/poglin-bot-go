@@ -168,10 +168,10 @@ func downloadVideo(url string) (string, string, error) {
 	log.Printf("Downloading: %s", url)
 
 	// Variable for the argument passing the cookies.txt file
-	// cookiesArg := fmt.Sprintf("'--cookies %s'", cookiesFile)
-	// ytdlpArgs := fmt.Sprintf("-c -p %s", url)
-	cmd := exec.Command(ytdlp, "-p", "'--cookies", "/app/cookies.txt'", "-c", url)
-	//cmd := exec.Command("/bin/bash", "-c" ytdlp, "-p", cookiesArg, "-c", url)
+	cookiesArg := fmt.Sprintf("\"--cookies %s\"", cookiesFile)
+	ytdlpArgs := fmt.Sprintf("%s -c -p %s %s", ytdlp, cookiesArg, url)
+	// cmd := exec.Command(ytdlp, "-c", "-p", cookiesArg, url)
+	cmd := exec.Command("/bin/bash", "-c", ytdlpArgs)
 
 	log.Printf("Command: %s", cmd.String())
 
