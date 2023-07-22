@@ -20,6 +20,7 @@ const ytdlp = "/app/yt-dlp_discord"
 const mainDir = "/app"
 const videosDir = "/app/videos"
 const cookiesFile = "/app/cookies.txt"
+const downloadRetries = 5
 
 func main() {
 
@@ -215,8 +216,8 @@ func sendVideo(urls []string, s *discordgo.Session, m *discordgo.MessageCreate, 
 		var video string   // Variable for storing name of downloaded video
 		var err error      // Variable for storing error code
 
-		maxAttempts := 3 // Maximum amount of allowed attempts
-		attempt := 0     // Variable for current attempt number
+		maxAttempts := downloadRetries // Maximum amount of allowed attempts
+		attempt := 0                   // Variable for current attempt number
 
 		for {
 			log.Printf("Downloading: %s", url)
