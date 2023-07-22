@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
-	"net/http"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -21,6 +20,7 @@ const ytdlp = "/app/yt-dlp_discord"
 const mainDir = "/app"
 const videosDir = "/app/videos"
 const cookiesFile = "/app/cookies.txt"
+const downloadRetries = 5
 
 func main() {
 
@@ -42,7 +42,7 @@ func main() {
 	// Add messageCreate() function as a callback for messageCreate events
 	dg.AddHandler(messageCreate)
 
-	// Stor information about guilds, messages and voice states
+	// Store information about guilds, messages and voice states
 	dg.Identify.Intents = discordgo.IntentsGuilds | discordgo.IntentsGuildMessages | discordgo.IntentsGuildVoiceStates
 
 	// Open websocket and wait for termination signal
@@ -150,23 +150,27 @@ func downloadVideo(url string) (string, string, error) {
 		if !strings.Contains(url, "vm.tiktok") && !strings.Contains(url, "/@") {
 			return "", "", errors.New("not URL for a TikTok video")
 		} else {
-			// Get the final URL after redirects
-			log.Printf("Following redirect from %s", url)
-			url, err = followRedir(url)
-			if err != nil {
-				log.Fatalf("Following redirect failed")
-				// return "", "", errors.New("following redirect failed")
-			}
-			log.Printf("Followed redirect until %s", url)
+			// // Get the final URL after redirects
+			// log.Printf("Following redirect from %s", url)
+			// url, err = followRedir(url)
+			// if err != nil {
+			// 	log.Fatalf("Following redirect failed")
+			// 	// return "", "", errors.New("following redirect failed")
+			// }
+			// log.Printf("Followed redirect until %s", url)
 		}
 	}
 
 	// Variables for constructing command for downloading video
-	cookiesArg := fmt.Sprintf("\"--cookies %s\"", cookiesFile)         // Variable for the argument passing the cookies.txt file
-	ytdlpArgs := fmt.Sprintf("%s -c -p %s %s", ytdlp, cookiesArg, url) // Variable for storing the entire command for downloading video
+	cookiesArg := fmt.Sprintf("\"--cookies %s\"", cookiesFile) // Variable for the argument passing the cookies.txt file
+	// ytdlpArgs := fmt.Sprintf("\"%s -c -p %s %s\"", ytdlp, cookiesArg, url) // Variable for storing the entire command for downloading video
+	ytdlpArgs := fmt.Sprintf("%s -c -p %s %s", ytdlp, cookiesArg, url)
 
 	// Execute command to download video using yt-dlp_discord
 	log.Printf("Downloading: %s", url)
+	// cmd := exec.Command("/bin/bash", "-c", ytdlpArgs)
+	// cmd := exec.Command(ytdlpArgs)
+	// cmd := exec.Command("/bin/bash", "-c", ytdlp, "-c", "-p", cookiesArg, url)
 	cmd := exec.Command("/bin/bash", "-c", ytdlpArgs)
 
 	log.Printf("Command: %s", cmd.String())
@@ -185,6 +189,13 @@ func downloadVideo(url string) (string, string, error) {
 		log.Printf("Could not list files in %s: %s", vidPath, err)
 		return "", "", errors.New("could not list files in directory")
 	}
+
+	// Check if a video was actually downloaded
+	if len(videos) == 0 {
+		log.Printf("No videos found in %s", vidPath)
+		return "", "", errors.New("no videos in directory")
+	}
+
 	video := videos[0].Name()
 
 	// Change back to the main working directory
@@ -205,8 +216,8 @@ func sendVideo(urls []string, s *discordgo.Session, m *discordgo.MessageCreate, 
 		var video string   // Variable for storing name of downloaded video
 		var err error      // Variable for storing error code
 
-		maxAttempts := 3 // Maximum amount of allowed attempts
-		attempt := 0     // Variable for current attempt number
+		maxAttempts := downloadRetries // Maximum amount of allowed attempts
+		attempt := 0                   // Variable for current attempt number
 
 		for {
 			log.Printf("Downloading: %s", url)
@@ -241,7 +252,16 @@ func sendVideo(urls []string, s *discordgo.Session, m *discordgo.MessageCreate, 
 				} else {
 					continue
 				}
+			} else if video == "" {
+				log.Printf("No video downloaded")
 
+				// Exit if max amount of attempts is reached
+				if attempt >= maxAttempts {
+					log.Printf("Could not download video after %d attempts. Exiting...", attempt)
+					return
+				} else {
+					continue
+				}
 			} else {
 				break
 			}
@@ -286,20 +306,21 @@ func sendVideo(urls []string, s *discordgo.Session, m *discordgo.MessageCreate, 
 	}
 }
 
-// Function for following URL redirects and find final URL
-func followRedir(url string) (string, error) {
-	// Request URL to follow redirects and find final URL
-	resp, err := http.Get(url)
-	if err != nil {
-		log.Printf("Request to %s failed with error: %s", url, err)
-		return "", errors.New("could not reach URL")
-	}
+// // Function for following URL redirects and find final URL
+// func followRedir(url string) (string, error) {
+// 	// Request URL to follow redirects and find final URL
+// 	resp, err := http.Get(url)
+// 	if err != nil {
+// 		log.Printf("Request to %s failed with error: %s", url, err)
+// 		return "", errors.New("could not reach URL")
+// 	}
 
-	// Store the final URL
-	url = resp.Request.URL.String()
+// 	// Store the final URL
+// 	url = resp.Request.URL.String()
+// 	// log.Printf("REDIR URL: %s\nTYPE: %T", url, url)
 
-	return url, nil
-}
+// 	return url, nil
+// }
 
 // Generate random string
 // Used for unique directory names for videos
