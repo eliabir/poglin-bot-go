@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
-	"net/http"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -42,7 +41,7 @@ func main() {
 	// Add messageCreate() function as a callback for messageCreate events
 	dg.AddHandler(messageCreate)
 
-	// Stor information about guilds, messages and voice states
+	// Store information about guilds, messages and voice states
 	dg.Identify.Intents = discordgo.IntentsGuilds | discordgo.IntentsGuildMessages | discordgo.IntentsGuildVoiceStates
 
 	// Open websocket and wait for termination signal
@@ -150,14 +149,14 @@ func downloadVideo(url string) (string, string, error) {
 		if !strings.Contains(url, "vm.tiktok") && !strings.Contains(url, "/@") {
 			return "", "", errors.New("not URL for a TikTok video")
 		} else {
-			// Get the final URL after redirects
-			log.Printf("Following redirect from %s", url)
-			url, err = followRedir(url)
-			if err != nil {
-				log.Fatalf("Following redirect failed")
-				// return "", "", errors.New("following redirect failed")
-			}
-			log.Printf("Followed redirect until %s", url)
+			// // Get the final URL after redirects
+			// log.Printf("Following redirect from %s", url)
+			// url, err = followRedir(url)
+			// if err != nil {
+			// 	log.Fatalf("Following redirect failed")
+			// 	// return "", "", errors.New("following redirect failed")
+			// }
+			// log.Printf("Followed redirect until %s", url)
 		}
 	}
 
@@ -286,20 +285,20 @@ func sendVideo(urls []string, s *discordgo.Session, m *discordgo.MessageCreate, 
 	}
 }
 
-// Function for following URL redirects and find final URL
-func followRedir(url string) (string, error) {
-	// Request URL to follow redirects and find final URL
-	resp, err := http.Get(url)
-	if err != nil {
-		log.Printf("Request to %s failed with error: %s", url, err)
-		return "", errors.New("could not reach URL")
-	}
+// // Function for following URL redirects and find final URL
+// func followRedir(url string) (string, error) {
+// 	// Request URL to follow redirects and find final URL
+// 	resp, err := http.Get(url)
+// 	if err != nil {
+// 		log.Printf("Request to %s failed with error: %s", url, err)
+// 		return "", errors.New("could not reach URL")
+// 	}
 
-	// Store the final URL
-	url = resp.Request.URL.String()
+// 	// Store the final URL
+// 	url = resp.Request.URL.String()
 
-	return url, nil
-}
+// 	return url, nil
+// }
 
 // Generate random string
 // Used for unique directory names for videos
