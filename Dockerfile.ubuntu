@@ -1,9 +1,13 @@
 FROM golang:1.19.4 AS build
+
+ARG BASH_TOOLBOX_VERSION="2023.07.02"
+ENV BASH_TOOLBOX_VERSION=${BASH_TOOLBOX_VERSION}
+
 WORKDIR /app
 COPY . .
 RUN apt-get update -y && \
     apt-get install -y git && \
-    git clone -b 2023.07.02 --single-branch https://github.com/philiptn/bash-toolbox.git && \
+    git clone -b ${BASH_TOOLBOX_VERSION} --single-branch https://github.com/philiptn/bash-toolbox.git && \
     go get ./internal && \
     go build -o /pogbot internal/main.go
 
