@@ -20,8 +20,8 @@ RUN apk update && \
 FROM alpine:3.16.0
 WORKDIR /app
 LABEL maintainer="eliabir"
-LABEL org.opencontainers.image.source https://github.com/eliabir/poglin-bot-go
-COPY --from=build /pogbot /app/bash-toolbox/yt-dlp_discord /app/yt-dlp ./ 
+LABEL org.opencontainers.image.source="https://github.com/eliabir/poglin-bot-go"
+COPY --from=build /pogbot /app/bash-toolbox/yt-dlp_discord /app/yt-dlp ./
 RUN mkdir -p /app/videos && \
     mv /app/yt-dlp /bin/yt-dlp && \
     apk update && \
