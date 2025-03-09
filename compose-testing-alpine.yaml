@@ -1,0 +1,12 @@
+services:
+  poglin-bot-go-alpine-testing:
+    image: pogbot:alpine-testing
+    build:
+      context: .
+      dockerfile: Dockerfile.alpine
+    container_name: poglin-bot-go-testing-alpine
+    volumes:
+      - ./cookies.txt:/app/cookies.txt
+    environment:
+      - DISCORD_API=$DISCORD_DEV_API
+    restart: unless-stopped
