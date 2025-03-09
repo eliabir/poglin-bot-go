@@ -1,9 +1,10 @@
-FROM golang:1.19.4-alpine3.16 AS build
+FROM golang:1.24-alpine AS build
 
-ARG BASH_TOOLBOX_VERSION="2023.07.02"
+
+ARG BASH_TOOLBOX_VERSION="main"
 ENV BASH_TOOLBOX_VERSION=$BASH_TOOLBOX_VERSION
 
-ARG YT_DLP_VERSION="2024.10.07"
+ARG YT_DLP_VERSION="2025.02.19"
 ENV YT_DLP_VERSION=$YT_DLP_VERSION
 
 WORKDIR /app
@@ -17,18 +18,22 @@ RUN apk update && \
     go get ./internal && \
     GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o /pogbot internal/main.go
 
-FROM alpine:3.16.0
-WORKDIR /app
+
+FROM alpine:3.21
+
 LABEL maintainer="eliabir"
 LABEL org.opencontainers.image.source="https://github.com/eliabir/poglin-bot-go"
+
+ENV TERM=xterm-256color
+WORKDIR /app
+
 COPY --from=build /pogbot /app/bash-toolbox/yt-dlp_discord /app/yt-dlp ./
 RUN mkdir -p /app/videos && \
-    mv /app/yt-dlp /bin/yt-dlp && \
-    apk update && \
-    apk add gcompat \
+    mv /app/yt-dlp /bin/yt-dlp
+RUN apk --update-cache --no-cache add gcompat \
             bash \
             ffmpeg \
-            py3-pip && \
-    pip3 install yt-dlp
+            ncurses \
+            python3
 
 CMD [ "/app/pogbot" ]

@@ -1,26 +1,40 @@
-FROM golang:1.19.4 AS build
+FROM golang:1.24 AS build
 
-ARG BASH_TOOLBOX_VERSION="2023.07.02"
+ARG BASH_TOOLBOX_VERSION="main"
 ENV BASH_TOOLBOX_VERSION=${BASH_TOOLBOX_VERSION}
+
+ARG YT_DLP_VERSION="2025.02.19"
+ENV YT_DLP_VERSION=$YT_DLP_VERSION
 
 WORKDIR /app
 COPY . .
 RUN apt-get update -y && \
     apt-get install -y git && \
     git clone -b ${BASH_TOOLBOX_VERSION} --single-branch https://github.com/philiptn/bash-toolbox.git && \
+    wget https://github.com/yt-dlp/yt-dlp/releases/download/${YT_DLP_VERSION}/yt-dlp -O /app/yt-dlp && \
+    chmod +x /app/yt-dlp && \
     go get ./internal && \
-    go build -o /pogbot internal/main.go
+    GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o /pogbot internal/main.go
+
 
 FROM ubuntu:22.04 
-LABEL maintainer="eliabir"
-LABEL org.opencontainers.image.source https://github.com/eliabir/poglin-bot-go
-WORKDIR /usr/src/bot
-COPY --from=build /pogbot /app/bash-toolbox/yt-dlp_discord ./
-RUN mkdir -p /usr/src/bot/videos && \
-    apt-get update -y && \
-    apt-get install -y \
-        ffmpeg \
-        python3-pip &&\
-    pip3 install yt-dlp
 
-CMD [ "/usr/src/bot/pogbot" ]
+LABEL maintainer="eliabir"
+LABEL org.opencontainers.image.source="https://github.com/eliabir/poglin-bot-go"
+
+ENV TERM=xterm-256color
+WORKDIR /app
+
+COPY --from=build /pogbot /app/bash-toolbox/yt-dlp_discord /app/yt-dlp ./
+RUN mkdir -p /app/videos && \
+    mv /app/yt-dlp /bin/yt-dlp
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y \
+        ffmpeg \
+        libncurses5-dev \
+        libncursesw5-dev \
+        python3-pip \
+        pipx && \
+    pipx install yt-dlp
+
+CMD [ "/app/pogbot" ]
