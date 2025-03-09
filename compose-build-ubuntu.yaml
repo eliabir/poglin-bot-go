@@ -1,0 +1,5 @@
+services:
+  poglin-bot-go-ubuntu-builder:
+    image: ghcr.io/eliabir/poglin-bot-go:v0.0.9-ubuntu
+    build:
+      dockerfile: Dockerfile.ubuntu

@@ -1,0 +1,5 @@
+services:
+  poglin-bot-go-alpine-builder:
+    image: ghcr.io/eliabir/poglin-bot-go:v0.0.9-alpine
+    build:
+      dockerfile: Dockerfile.alpine
