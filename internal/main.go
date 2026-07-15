@@ -235,9 +235,7 @@ func sendVideo(urls []string, s *discordgo.Session, m *discordgo.MessageCreate, 
 				attempt += 1
 
 				if attempt >= maxAttempts {
-					break
-				} else {
-					continue
+					return
 				}
 			}
 
