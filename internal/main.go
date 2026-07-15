@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"math/rand"
 	"os"
@@ -72,7 +74,6 @@ func ready(s *discordgo.Session, event *discordgo.Ready) {
 
 // Function called when messages new messages are detected
 func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
-
 	// Ignore messages created by the bot
 	if m.Author.ID == s.State.User.ID {
 		return
@@ -169,12 +170,19 @@ func downloadVideo(url string) (string, string, error) {
 
 	log.Printf("Command: %s", cmd.String())
 
-	// Stream output from cmd
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	// Stream and store output from cmd
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = io.MultiWriter(os.Stdout, &stdout)
+	cmd.Stderr = io.MultiWriter(os.Stderr, &stderr)
+
+	// Run ytdlp command
 	err = cmd.Run()
 	if err != nil {
-		log.Printf("Could not execute ytdlp: %s", err)
+		outputErr := stderr.String()
+		log.Printf("Could not execute ytdlp: %s", outputErr)
+		if strings.Contains(outputErr, "Unsupported URL") {
+			return "", "", errors.New("Unsupported URL")
+		}
 	}
 
 	// Get name of downloaded video
@@ -218,6 +226,12 @@ func sendVideo(urls []string, s *discordgo.Session, m *discordgo.MessageCreate, 
 			video, vidPath, err = downloadVideo(url)
 			if err != nil {
 				log.Printf("Could not download %s: %s", video, err)
+
+				if err.Error() == "Unsupported URL" {
+					log.Printf("Unspported URL, aborting...")
+					return
+				}
+
 				attempt += 1
 
 				if attempt >= maxAttempts {
