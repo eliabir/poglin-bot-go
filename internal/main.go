@@ -150,15 +150,6 @@ func downloadVideo(url string) (string, string, error) {
 	if strings.Contains(url, "tiktok") {
 		if !strings.Contains(url, "vm.tiktok") && !strings.Contains(url, "/@") {
 			return "", "", errors.New("not URL for a TikTok video")
-		} else {
-			// // Get the final URL after redirects
-			// log.Printf("Following redirect from %s", url)
-			// url, err = followRedir(url)
-			// if err != nil {
-			// 	log.Fatalf("Following redirect failed")
-			// 	// return "", "", errors.New("following redirect failed")
-			// }
-			// log.Printf("Followed redirect until %s", url)
 		}
 	}
 
@@ -170,11 +161,8 @@ func downloadVideo(url string) (string, string, error) {
 
 		// Execute command to download video using yt-dlp_discord
 		log.Printf("Downloading: %s", url)
-		// cmd := exec.Command("/bin/bash", "-c", ytdlpArgs)
-		// cmd := exec.Command(ytdlpArgs)
 		cmd = exec.Command("/bin/bash", "-c", ytdlp, "-c", "-p", cookiesArg, url)
 	} else {
-		// ytdlpArgs := fmt.Sprintf("\"%s -c -p %s %s\"", ytdlp, cookiesArg, url) // Variable for storing the entire command for downloading video
 		ytdlpArgs = fmt.Sprintf("%s -c %s", ytdlp, url)
 		cmd = exec.Command("/bin/bash", "-c", ytdlpArgs)
 	}
