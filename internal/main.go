@@ -313,22 +313,6 @@ func sendVideo(urls []string, s *discordgo.Session, m *discordgo.MessageCreate, 
 	}
 }
 
-// // Function for following URL redirects and find final URL
-// func followRedir(url string) (string, error) {
-// 	// Request URL to follow redirects and find final URL
-// 	resp, err := http.Get(url)
-// 	if err != nil {
-// 		log.Printf("Request to %s failed with error: %s", url, err)
-// 		return "", errors.New("could not reach URL")
-// 	}
-
-// 	// Store the final URL
-// 	url = resp.Request.URL.String()
-// 	// log.Printf("REDIR URL: %s\nTYPE: %T", url, url)
-
-// 	return url, nil
-// }
-
 // Generate random string
 // Used for unique directory names for videos
 // SRC: https://stackoverflow.com/a/22892986/11234304
