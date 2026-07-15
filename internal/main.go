@@ -6,16 +6,15 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"math/rand"
 	"os"
 	"os/exec"
 	"os/signal"
 	"regexp"
 	"strings"
 	"syscall"
-	"time"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/google/uuid"
 )
 
 const ytdlp = "/app/yt-dlp_discord"
@@ -131,7 +130,7 @@ func urlExtract(msg string) []string {
 
 func downloadVideo(url string) (string, string, error) {
 	// Create new directory for video
-	dirName, _ := genRandomStr(10)
+	dirName := uuid.New().String()
 	vidPath := videosDir + "/" + dirName
 	log.Printf("Creating directory %s", vidPath)
 	err := os.Mkdir(vidPath, 0700)
@@ -311,14 +310,4 @@ func sendVideo(urls []string, s *discordgo.Session, m *discordgo.MessageCreate, 
 			log.Printf("Failed to remove %s: %s", vidPath, err)
 		}
 	}
-}
-
-// Generate random string
-// Used for unique directory names for videos
-// SRC: https://stackoverflow.com/a/22892986/11234304
-func genRandomStr(strLen int) (string, error) {
-	rand.Seed(time.Now().UnixNano())
-	b := make([]byte, strLen)
-	rand.Read(b)
-	return fmt.Sprintf("%x", b)[:strLen], nil
 }

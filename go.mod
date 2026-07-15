@@ -4,7 +4,7 @@ go 1.25.0
 
 require (
 	github.com/bwmarrin/discordgo v0.29.0
-	google.golang.org/grpc v1.82.0
+	github.com/google/uuid v1.6.0
 )
 
 require (
