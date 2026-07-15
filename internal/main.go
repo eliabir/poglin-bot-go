@@ -269,6 +269,7 @@ func sendVideo(urls []string, s *discordgo.Session, m *discordgo.MessageCreate, 
 					continue
 				}
 			} else {
+				// Download seems to be successful
 				break
 			}
 		}
