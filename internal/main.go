@@ -20,6 +20,7 @@ const ytdlp = "/app/yt-dlp_discord"
 const mainDir = "/app"
 const videosDir = "/app/videos"
 const cookiesFile = "/app/cookies.txt"
+const useCookies = false
 const downloadRetries = 5
 
 func main() {
@@ -161,17 +162,6 @@ func downloadVideo(url string) (string, string, error) {
         }
     }
 
-    // Variables for constructing command for downloading video
-    cookiesArg := fmt.Sprintf("\"--cookies %s\"", cookiesFile) // Variable for the argument passing the cookies.txt file
-    // ytdlpArgs := fmt.Sprintf("\"%s -c -p %s %s\"", ytdlp, cookiesArg, url) // Variable for storing the entire command for downloading video
-    ytdlpArgs := fmt.Sprintf("%s -c -p %s %s", ytdlp, cookiesArg, url)
-
-    // Execute command to download video using yt-dlp_discord
-    log.Printf("Downloading: %s", url)
-    // cmd := exec.Command("/bin/bash", "-c", ytdlpArgs)
-    // cmd := exec.Command(ytdlpArgs)
-    // cmd := exec.Command("/bin/bash", "-c", ytdlp, "-c", "-p", cookiesArg, url)
-    cmd := exec.Command("/bin/bash", "-c", ytdlpArgs)
 
     log.Printf("Command: %s", cmd.String())
 
@@ -206,6 +196,22 @@ func downloadVideo(url string) (string, string, error) {
     }
 
     return video, vidPath, nil
+	var ytdlpArgs string
+	var cmd *exec.Cmd
+	if useCookies {
+		cookiesArg := fmt.Sprintf("\"--cookies %s\"", cookiesFile) // Variable for the argument passing the cookies.txt file
+		ytdlpArgs = fmt.Sprintf("%s -c -p %s %s", ytdlp, cookiesArg, url)
+
+		// Execute command to download video using yt-dlp_discord
+		log.Printf("Downloading: %s", url)
+		// cmd := exec.Command("/bin/bash", "-c", ytdlpArgs)
+		// cmd := exec.Command(ytdlpArgs)
+		cmd = exec.Command("/bin/bash", "-c", ytdlp, "-c", "-p", cookiesArg, url)
+	} else {
+		// ytdlpArgs := fmt.Sprintf("\"%s -c -p %s %s\"", ytdlp, cookiesArg, url) // Variable for storing the entire command for downloading video
+		ytdlpArgs = fmt.Sprintf("%s -c %s", ytdlp, url)
+		cmd = exec.Command("/bin/bash", "-c", ytdlpArgs)
+	}
 }
 
 func sendVideo(urls []string, s *discordgo.Session, m *discordgo.MessageCreate, msgRef *discordgo.MessageReference) {
