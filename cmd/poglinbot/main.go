@@ -1,41 +1,29 @@
 package main
 
 import (
-	"bytes"
-	"errors"
 	"fmt"
-	"io"
 	"log"
 	"os"
-	"os/exec"
 	"os/signal"
-	"regexp"
-	"strings"
 	"syscall"
 
+	"github.com/eliabir/poglin-bot-go/internal/config"
+	"github.com/eliabir/poglin-bot-go/internal/url"
+	"github.com/eliabir/poglin-bot-go/internal/video"
+
 	"github.com/bwmarrin/discordgo"
-	"github.com/google/uuid"
 )
 
-const ytdlp = "/app/yt-dlp_discord"
-const mainDir = "/app"
-const videosDir = "/app/videos"
-const cookiesFile = "/app/cookies.txt"
-const useCookies = false
-const downloadRetries = 5
-
 func main() {
-
-	// Get DISCORD_API environment variable
-	apiKey := os.Getenv("DISCORD_API")
-	if apiKey == "" {
-		log.Fatalln("Could not retrieve API token from environment variable")
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatalf("loading config: %v", err)
 	}
 
 	// Create Discord bot session
-	dg, err := discordgo.New("Bot " + apiKey)
+	dg, err := discordgo.New("Bot " + cfg.ApiKey)
 	if err != nil {
-		log.Fatalln("Could not create Discord session: ", err)
+		log.Fatalf("starting discord bot session: %v", err)
 	}
 
 	// Add ready() function as callback for ready events
@@ -50,10 +38,10 @@ func main() {
 	// Open websocket and wait for termination signal
 	err = dg.Open()
 	if err != nil {
-		log.Fatalln("Error opening Discord websocket: ", err)
+		log.Fatalf("opening discord websocket failed: %v", err)
 	}
 
-	log.Printf("Poglin-bot is now running. Press CTRL-C to exit.")
+	log.Printf("Poglin-Bot is now running. Press CTRL-C to exit.")
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 	<-sc
@@ -85,14 +73,15 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	msgRef := m.Reference()
 
 	// Check if the message has an Instagram or tiktok URL
-	if !urlCheck(content) {
+	if !url.Check(content) {
 		return
 	}
 
 	log.Printf("Video URL detected in '%s'", content)
 
 	// Extracting URLs from message
-	urls := urlExtract(content)
+	log.Printf("Extract URLs")
+	urls := url.Extract(content)
 	if len(urls) == 0 {
 		log.Println("No URLs extracted")
 		return
@@ -100,214 +89,5 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 	// Download and send video running as goroutine
 	log.Printf("Download and send videos running as goroutine")
-	go sendVideo(urls, s, m, msgRef)
-}
-
-// Function for checking if URL is from one of the supported sites
-func urlCheck(content string) bool {
-	domains := []string{"instagram.com/reel", "tiktok.com", "youtube.com/shorts"}
-	for _, domain := range domains {
-		if strings.Contains(content, domain) {
-			return true
-		}
-	}
-
-	return false
-}
-
-// Function for extracting URL from messages
-func urlExtract(msg string) []string {
-	// Regex for finding URL substrings in string
-	re := regexp.MustCompile(`((([A-Za-z]{3,9}:(?:\/\/)?)(?:[-;:&=\+\$,\w]+@)?[A-Za-z0-9.-]+|(?:www.|[-;:&=\+\$,\w]+@)[A-Za-z0-9.-]+)((?:\/[\+~%\/.\w\-_]*)?\??(?:[-\+=&;%@.\w_]*)#?(?:[.\!\/\\\w]*))?)`)
-
-	// Checking the msg string for URLs using the re regex
-	urls := re.FindAllString(msg, -1)
-
-	log.Printf("Checked message for URLs")
-
-	return urls
-}
-
-func downloadVideo(url string) (string, string, error) {
-	// Create new directory for video
-	dirName := uuid.New().String()
-	vidPath := videosDir + "/" + dirName
-	log.Printf("Creating directory %s", vidPath)
-	err := os.Mkdir(vidPath, 0700)
-	if err != nil {
-		log.Printf("Could not create directory %s: %s", vidPath, err)
-		return "", "", errors.New("could not create directory")
-	}
-
-	// Change to videos/ directory to store videos
-	err = os.Chdir(vidPath)
-	if err != nil {
-		log.Printf("Could not change directory to %s: %s", vidPath, err)
-		return "", "", errors.New("failed changing directory")
-	}
-
-	// Check if TikTok URL is for a video
-	if strings.Contains(url, "tiktok") {
-		if !strings.Contains(url, "vm.tiktok") && !strings.Contains(url, "/@") {
-			return "", "", errors.New("not URL for a TikTok video")
-		}
-	}
-
-	var ytdlpArgs string
-	var cmd *exec.Cmd
-	if useCookies {
-		cookiesArg := fmt.Sprintf("\"--cookies %s\"", cookiesFile) // Variable for the argument passing the cookies.txt file
-		ytdlpArgs = fmt.Sprintf("%s -c -p %s %s", ytdlp, cookiesArg, url)
-
-		// Execute command to download video using yt-dlp_discord
-		log.Printf("Downloading: %s", url)
-		cmd = exec.Command("/bin/bash", "-c", ytdlp, "-c", "-p", cookiesArg, url)
-	} else {
-		ytdlpArgs = fmt.Sprintf("%s -c %s", ytdlp, url)
-		cmd = exec.Command("/bin/bash", "-c", ytdlpArgs)
-	}
-
-	log.Printf("Command: %s", cmd.String())
-
-	// Stream and store output from cmd
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = io.MultiWriter(os.Stdout, &stdout)
-	cmd.Stderr = io.MultiWriter(os.Stderr, &stderr)
-
-	// Run ytdlp command
-	err = cmd.Run()
-	if err != nil {
-		outputErr := stderr.String()
-		log.Printf("Could not execute ytdlp: %s", outputErr)
-		if strings.Contains(outputErr, "Unsupported URL") {
-			return "", "", errors.New("Unsupported URL")
-		}
-	}
-
-	// Get name of downloaded video
-	videos, err := os.ReadDir(vidPath)
-	if err != nil {
-		log.Printf("Could not list files in %s: %s", vidPath, err)
-		return "", "", errors.New("could not list files in directory")
-	}
-
-	// Check if a video was actually downloaded
-	if len(videos) == 0 {
-		log.Printf("No videos found in %s", vidPath)
-		return "", "", errors.New("no videos in directory")
-	}
-
-	video := videos[0].Name()
-
-	// Change back to the main working directory
-	err = os.Chdir(mainDir)
-	if err != nil {
-		log.Printf("Could not change directory to %s: %s", mainDir, err)
-		return "", "", errors.New("failed changing directory")
-	}
-
-	return video, vidPath, nil
-}
-
-func sendVideo(urls []string, s *discordgo.Session, m *discordgo.MessageCreate, msgRef *discordgo.MessageReference) {
-	log.Print("Downloading and sending videos.")
-	for _, url := range urls {
-
-		var vidPath string // Variable for storing path of downloaded video
-		var video string   // Variable for storing name of downloaded video
-		var err error      // Variable for storing error code
-
-		maxAttempts := downloadRetries // Maximum amount of allowed attempts
-		attempt := 0                   // Variable for current attempt number
-
-		for {
-			log.Printf("Downloading: %s", url)
-			video, vidPath, err = downloadVideo(url)
-			if err != nil {
-				log.Printf("Could not download %s: %s", video, err)
-
-				if err.Error() == "Unsupported URL" {
-					log.Printf("Unspported URL, aborting...")
-					return
-				}
-
-				attempt += 1
-
-				if attempt >= maxAttempts {
-					return
-				}
-			}
-
-			// If the downloaded file is called .tmp the download has failed. Retry
-			if video == ".tmp" {
-				attempt += 1
-				log.Printf("Failed to download video. Retries left: %d", maxAttempts-attempt)
-
-				// Delete failed downloaded video and its directory
-				log.Printf("Deleting %s/%s", vidPath, video)
-				err = os.RemoveAll(vidPath + "/")
-				if err != nil {
-					log.Printf("Failed to remove %s: %s", vidPath, err)
-				}
-
-				// Exit if max amount of attempts is reached
-				if attempt >= maxAttempts {
-					log.Printf("Could not download video after %d attempts. Exiting...", attempt)
-					return
-				} else {
-					continue
-				}
-			} else if video == "" {
-				log.Printf("No video downloaded")
-
-				// Exit if max amount of attempts is reached
-				if attempt >= maxAttempts {
-					log.Printf("Could not download video after %d attempts. Exiting...", attempt)
-					return
-				} else {
-					continue
-				}
-			} else {
-				// Download seems to be successful
-				break
-			}
-		}
-
-		// Opening video file for reading
-		log.Printf("Opening %s", video)
-		vidReader, err := os.Open(vidPath + "/" + video)
-		if err != nil {
-			log.Printf("Failed to open %s: %s", video, err)
-			continue
-		}
-
-		// Constructing discordgo.File object of the downloaded videofile
-		log.Printf("Constructing discordgo.File object and pointer")
-		vidFile := []*discordgo.File{{Name: video, ContentType: "video/mp4", Reader: vidReader}}
-
-		// Constructing discordgo.MessageSend object to send video
-		log.Printf("Constructing discordgo.MessageSend object")
-		msgSend := &discordgo.MessageSend{Files: vidFile, Reference: msgRef}
-
-		// Sending video
-		log.Printf("Sending video: %s", video)
-		_, err = s.ChannelMessageSendComplex(m.ChannelID, msgSend)
-		if err != nil {
-			log.Panicf("Could not send video: %s", err)
-		}
-
-		// Closing video file
-		log.Printf("Closing %s", video)
-		err = vidReader.Close()
-		if err != nil {
-			log.Printf("Could not close %s: %s", video, err)
-		}
-
-		// Delete video and its directory
-		log.Printf("Deleting %s/%s", vidPath, video)
-		err = os.RemoveAll(vidPath + "/")
-		if err != nil {
-			log.Printf("Failed to remove %s: %s", vidPath, err)
-		}
-	}
+	go video.Handle(urls, s, m, msgRef)
 }
