@@ -15,8 +15,7 @@ RUN apk update && \
     git clone -b ${BASH_TOOLBOX_VERSION} --single-branch https://github.com/philiptn/bash-toolbox.git && \
     wget https://github.com/yt-dlp/yt-dlp/releases/download/${YT_DLP_VERSION}/yt-dlp -O /app/yt-dlp && \
     chmod +x /app/yt-dlp && \
-    go get ./internal && \
-    GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o /pogbot internal/main.go
+    GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /out/poglinbot ./cmd/poglinbot
 
 
 FROM alpine:3.24
