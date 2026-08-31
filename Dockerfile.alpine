@@ -8,6 +8,7 @@ ENV YT_DLP_VERSION=$YT_DLP_VERSION
 
 WORKDIR /app
 COPY . .
+
 RUN apk update && \
     apk add git \
             wget && \
@@ -27,8 +28,10 @@ ENV TERM=xterm-256color
 WORKDIR /app
 
 COPY --from=build /pogbot /app/bash-toolbox/yt-dlp_discord /app/yt-dlp ./
+
 RUN mkdir -p /app/videos && \
     mv /app/yt-dlp /bin/yt-dlp
+
 RUN apk --update-cache --no-cache add gcompat \
             bash \
             ffmpeg \
