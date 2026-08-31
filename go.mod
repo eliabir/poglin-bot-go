@@ -1,6 +1,6 @@
 module github.com/eliabir/poglin-bot-go
 
-go 1.25.0
+go 1.27.0
 
 require (
 	github.com/bwmarrin/discordgo v0.29.0
